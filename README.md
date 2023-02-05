@@ -2,7 +2,7 @@
 
 This project reads all the details of network interfaces and stores them under an S3 bucket.It basically runs as double container in a pod;
 
-## Components;
+## Components;
 1-) Tcpdump
 2-) watcher 
 
