@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kpcap.fullname" . }}
+  labels:
+    {{- include "kpcap.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "kpcap.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "kpcap.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kpcap.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      hostNetwork: true
+      volumes:
+      - name: tcp-volume
+        emptyDir:
+          sizeLimit: 2000Mi
+      containers:
+        - name: watcher
+          image: emirozbir/pcap-journal
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: BUCKET_NAME
+            value: ack-controller-woodprogrammer
+          - name: PCAP_DIR
+            value: "/opt"
+          volumeMounts:
+          - mountPath: /opt/
+            name: tcp-volume
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: emirozbir/tcpdump
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["bash"]
+          args: ["-c", "sleep 10000"]
+          volumeMounts:
+          - mountPath: /opt/
+            name: tcp-volume
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
